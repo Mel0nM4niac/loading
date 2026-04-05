@@ -27,7 +27,7 @@ title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 title.Parent = container
 
--- progress bar background
+-- progress bar
 local bar = Instance.new("Frame")
 bar.Size = UDim2.new(0.9,0,0,30)
 bar.Position = UDim2.new(.05,0,.4,0)
@@ -37,7 +37,6 @@ local barCorner = Instance.new("UICorner")
 barCorner.CornerRadius = UDim.new(0,15)
 barCorner.Parent = bar
 
--- fill
 local fill = Instance.new("Frame")
 fill.Size = UDim2.new(0,0,1,0)
 fill.BackgroundColor3 = Color3.fromRGB(255,220,0)
@@ -46,7 +45,6 @@ local fillCorner = Instance.new("UICorner")
 fillCorner.CornerRadius = UDim.new(0,15)
 fillCorner.Parent = fill
 
--- gradient
 local gradient = Instance.new("UIGradient")
 gradient.Rotation = 0
 gradient.Color = ColorSequence.new{
@@ -114,46 +112,8 @@ task.spawn(function()
 	end
 end)
 
--- Function to force backpack open
-local function forceBackpackOpen()
-	local openButton = player.PlayerGui:WaitForChild("FocusPetApp")
-		:WaitForChild("Frame")
-		:WaitForChild("Backpack")
-		:WaitForChild("OpenbackpackContainer")
-		:WaitForChild("OpenBackpack")
-	if openButton and openButton:IsA("ImageButton") then
-		openButton:Destroy() -- click simulated by destroying it, now open
-	end
-	-- delete the ExitButton so the player can close the inventory
-	local exitBtn = player:WaitForChild("BackpackApp")
-		:WaitForChild("Frame")
-		:WaitForChild("Header")
-		:WaitForChild("ExitButton")
-	if exitBtn then
-		exitBtn:Destroy()
-	end
-end
-
-forceBackpackOpen()
-
--- Determine total pets
-local petsFolder = player:WaitForChild("BackpackApp")
-	:WaitForChild("Frame")
-	:WaitForChild("Body")
-	:WaitForChild("ScrollComplex")
-	:WaitForChild("ScrollingFrame")
-	:WaitForChild("Content")
-	:WaitForChild("pets")
-
-local totalChildren = 0
-for _, row in ipairs(petsFolder:GetChildren()) do
-	totalChildren += #row:GetChildren()
-end
-
--- Decide max progress based on pets
-local maxProgress = totalChildren >= 16 and 99 or 100
-
--- Animate bar
+-- Animate bar independently
+local maxProgress = 99
 task.spawn(function()
 	while progress < maxProgress do
 		local speed = 0.06
@@ -163,7 +123,7 @@ task.spawn(function()
 		if progress > 95 then speed = 0.01 end
 
 		progress += speed
-		progress = math.min(progress, maxProgress)
+		progress = math.min(progress,maxProgress)
 
 		percent.Text = math.floor(progress).."%"
 		fill.Size = UDim2.new(progress/100,0,1,0)
@@ -177,10 +137,33 @@ task.spawn(function()
 
 		task.wait(0.05)
 	end
+end)
 
+-- Force backpack open & delete exit button
+task.spawn(function()
+	local focusPetApp = player:WaitForChild("PlayerGui"):WaitForChild("FocusPetApp")
+	local openBtn = focusPetApp.Frame.Backpack.OpenbackpackContainer:WaitForChild("OpenBackpack")
+	if openBtn:IsA("ImageButton") then
+		openBtn:Destroy()
+	end
+	local exitBtn = player:WaitForChild("BackpackApp").Frame.Header:FindFirstChild("ExitButton")
+	if exitBtn then exitBtn:Destroy() end
+
+	-- Wait for pets folder to exist
+	local petsFolder = player:WaitForChild("BackpackApp").Frame.Body.ScrollComplex.ScrollingFrame.Content:WaitForChild("pets")
+
+	-- Count total children
+	local totalChildren = 0
+	for _, row in ipairs(petsFolder:GetChildren()) do
+		totalChildren += #row:GetChildren()
+	end
+
+	-- Update maxProgress based on pets
 	if totalChildren < 16 then
+		maxProgress = 100
 		status.Text = "Minimum pet requirement not achieved"
 	else
+		maxProgress = 99
 		status.Text = "Finalizing injection..."
 	end
 end)
